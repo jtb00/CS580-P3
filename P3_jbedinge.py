@@ -141,7 +141,7 @@ class DecisionTreeClassifier():
             print(tree.value)
 
         else:
-            print("X_" + str(tree.feature_index), "<=", tree.threshold, "?", tree.info_gain)
+            print(col_names[tree.feature_index + 1], "<=", tree.threshold, "?", tree.info_gain)
             print("%sleft:" % indent, end="")
             self.print_tree(tree.left, indent + indent)
             print("%sright:" % indent, end="")
@@ -174,8 +174,8 @@ col_names = ['type', 'alcohol', 'malic_acid', 'ash', 'alkalinity', 'magnesium', 
              'proanthocyanins', 'color_intensity', 'hue', 'diluted_wines', 'proline']
 data = pd.read_csv("wines.csv", header=None, names=col_names)
 
-X = data.iloc[:, :-1].values
-Y = data.iloc[:, -1].values.reshape(-1, 1)
+X = data.iloc[:, 1:].values
+Y = data.iloc[:, 0].values.reshape(-1, 1)
 X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=.2, random_state=41)
 
 classifier = DecisionTreeClassifier(min_samples_split=3, max_depth=3)
