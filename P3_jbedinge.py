@@ -1,7 +1,10 @@
 import random
+import sys
 
 import numpy as np
 import pandas as pd
+
+mode = 'gini'
 
 
 class Node:
@@ -70,11 +73,11 @@ class DecisionTreeClassifier:
             for threshold in possible_thresholds:
                 # get current split
                 dataset_left, dataset_right = self.split(dataset, feature_index, threshold)
-                # check if childs are not null
+                # check if children are not null
                 if len(dataset_left) > 0 and len(dataset_right) > 0:
                     y, left_y, right_y = dataset[:, -1], dataset_left[:, -1], dataset_right[:, -1]
                     # compute information gain
-                    curr_info_gain = self.information_gain(y, left_y, right_y, "gini")
+                    curr_info_gain = self.information_gain(y, left_y, right_y, mode)
                     # update the best split if needed
                     if curr_info_gain > max_info_gain:
                         best_split["feature_index"] = feature_index
@@ -156,8 +159,8 @@ class DecisionTreeClassifier:
     def predict(self, X):
         ''' function to predict new dataset '''
 
-        preditions = [self.make_prediction(x, self.root) for x in X]
-        return preditions
+        predictions = [self.make_prediction(x, self.root) for x in X]
+        return predictions
 
     def make_prediction(self, x, tree):
         ''' function to predict a single data point '''
@@ -179,16 +182,19 @@ def train_test_split(X, Y, test_size, seed):
     train = np.zeros(shape=(len(X) - int(test_size * len(X)), len(col_names)))
     test = np.zeros(shape=(int(test_size * len(X)), len(col_names)))
     indices = list(range(len(X)))
+    if seed is None:
+        seed = random.randrange(sys.maxsize)
+        print("Seed was: " + str(seed))
     random.seed(seed)
     n = int(test_size * len(X))
     for i in range(n):
         index = random.randint(0, len(indices) - 1)
-        test[i] = dataset[index]
+        test[i] = dataset[indices[index]]
         indices.pop(index)
     n = len(X) - n
     for i in range(n):
         index = random.randint(0, len(indices) - 1)
-        train[i] = dataset[index]
+        train[i] = dataset[indices[index]]
         indices.pop(index)
     X_train, Y_train = train[:, :-1], train[:, -1].reshape(-1, 1)
     X_test, Y_test = test[:, :-1], test[:, -1].reshape(-1, 1)
@@ -209,12 +215,11 @@ data = pd.read_csv("wines.csv", header=None, names=col_names)
 
 X = data.iloc[:, 1:].values
 Y = data.iloc[:, 0].values.reshape(-1, 1)
-# X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=.2, random_state=41)
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, .2, 41)
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, .2, None)
 
-classifier = DecisionTreeClassifier(min_samples_split=3, max_depth=3)
+classifier = DecisionTreeClassifier(min_samples_split=2, max_depth=10)
 classifier.fit(X_train, Y_train)
 classifier.print_tree()
 
 Y_pred = classifier.predict(X_test)
-print(accuracy_score(Y_test, Y_pred))
+print("Accuracy: " + str(accuracy_score(Y_test, Y_pred)))
