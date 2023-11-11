@@ -1,10 +1,10 @@
+import random
+
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 
 
-class Node():
+class Node:
     def __init__(self, feature_index=None, threshold=None, left=None, right=None, info_gain=None, value=None):
         ''' constructor '''
 
@@ -19,7 +19,7 @@ class Node():
         self.value = value
 
 
-class DecisionTreeClassifier():
+class DecisionTreeClassifier:
     def __init__(self, min_samples_split=2, max_depth=2):
         ''' constructor '''
 
@@ -170,13 +170,47 @@ class DecisionTreeClassifier():
             return self.make_prediction(x, tree.right)
 
 
+def train_test_split(X, Y, test_size, seed):
+    if test_size == 0.0:
+        return X, [], Y, []
+    elif test_size == 1.0:
+        return [], X, [], Y
+    dataset = np.concatenate((X, Y), axis=1)
+    train = np.zeros(shape=(len(X) - int(test_size * len(X)), len(col_names)))
+    test = np.zeros(shape=(int(test_size * len(X)), len(col_names)))
+    indices = list(range(len(X)))
+    random.seed(seed)
+    n = int(test_size * len(X))
+    for i in range(n):
+        index = random.randint(0, len(indices) - 1)
+        test[i] = dataset[index]
+        indices.pop(index)
+    n = len(X) - n
+    for i in range(n):
+        index = random.randint(0, len(indices) - 1)
+        train[i] = dataset[index]
+        indices.pop(index)
+    X_train, Y_train = train[:, :-1], train[:, -1].reshape(-1, 1)
+    X_test, Y_test = test[:, :-1], test[:, -1].reshape(-1, 1)
+    return X_train, X_test, Y_train, Y_test
+
+
+def accuracy_score(test, pred):
+    count = 0
+    for i in range(len(test)):
+        if test[i] == pred[i]:
+            count = count + 1
+    return count / len(test)
+
+
 col_names = ['type', 'alcohol', 'malic_acid', 'ash', 'alkalinity', 'magnesium', 'phenols', 'flavanoids', 'nonflavanoid',
              'proanthocyanins', 'color_intensity', 'hue', 'diluted_wines', 'proline']
 data = pd.read_csv("wines.csv", header=None, names=col_names)
 
 X = data.iloc[:, 1:].values
 Y = data.iloc[:, 0].values.reshape(-1, 1)
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=.2, random_state=41)
+# X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=.2, random_state=41)
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, .2, 41)
 
 classifier = DecisionTreeClassifier(min_samples_split=3, max_depth=3)
 classifier.fit(X_train, Y_train)
@@ -184,4 +218,3 @@ classifier.print_tree()
 
 Y_pred = classifier.predict(X_test)
 print(accuracy_score(Y_test, Y_pred))
-
