@@ -1,10 +1,13 @@
 import random
 import sys
+import time
 
 import numpy as np
 import pandas as pd
 
-mode = 'gini'
+min_samples = range(2, 21)
+depth = range(2, 11)
+mode = ['entropy', 'gini']
 
 
 class Node:
@@ -23,7 +26,7 @@ class Node:
 
 
 class DecisionTreeClassifier:
-    def __init__(self, min_samples_split=2, max_depth=2):
+    def __init__(self, min_samples_split=2, max_depth=2, mode='entropy'):
         ''' constructor '''
 
         # initialize the root of the tree
@@ -32,6 +35,7 @@ class DecisionTreeClassifier:
         # stopping conditions
         self.min_samples_split = min_samples_split
         self.max_depth = max_depth
+        self.mode = mode
 
     def build_tree(self, dataset, curr_depth=0):
         ''' recursive function to build the tree '''
@@ -77,7 +81,7 @@ class DecisionTreeClassifier:
                 if len(dataset_left) > 0 and len(dataset_right) > 0:
                     y, left_y, right_y = dataset[:, -1], dataset_left[:, -1], dataset_right[:, -1]
                     # compute information gain
-                    curr_info_gain = self.information_gain(y, left_y, right_y, mode)
+                    curr_info_gain = self.information_gain(y, left_y, right_y, self.mode)
                     # update the best split if needed
                     if curr_info_gain > max_info_gain:
                         best_split["feature_index"] = feature_index
@@ -184,7 +188,7 @@ def train_test_split(X, Y, test_size, seed):
     indices = list(range(len(X)))
     if seed is None:
         seed = random.randrange(sys.maxsize)
-        print("Seed was: " + str(seed))
+        # print("Seed was: " + str(seed))
     random.seed(seed)
     n = int(test_size * len(X))
     for i in range(n):
@@ -209,17 +213,47 @@ def accuracy_score(test, pred):
     return count / len(test)
 
 
+def random_search(X, Y, iter):
+    best_s = 0
+    best_d = 0
+    best_m = 0
+    best_score = 0.0
+    random.seed(time.time())
+    for i in range(iter):
+        s = min_samples[random.randint(0, len(min_samples) - 1)]
+        d = depth[random.randint(0, len(depth) - 1)]
+        m = random.randint(0, 1)
+        classifier = DecisionTreeClassifier(min_samples_split=s, max_depth=d, mode=mode[m])
+        classifier.fit(X, Y)
+        Y_pred = classifier.predict(X)
+        score = accuracy_score(Y, Y_pred)
+        if score > best_score:
+            best_s = s
+            best_d = d
+            best_m = m
+            best_score = score
+        if best_score == 1:
+            break
+    return best_s, best_d, best_m
+
+
 col_names = ['type', 'alcohol', 'malic_acid', 'ash', 'alkalinity', 'magnesium', 'phenols', 'flavanoids', 'nonflavanoid',
              'proanthocyanins', 'color_intensity', 'hue', 'diluted_wines', 'proline']
 data = pd.read_csv("wines.csv", header=None, names=col_names)
 
+# start = time.time()
 X = data.iloc[:, 1:].values
 Y = data.iloc[:, 0].values.reshape(-1, 1)
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, .2, None)
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, .3, None)
+X_train2, X_valid, Y_train2, Y_valid = train_test_split(X_train, Y_train, .3, None)
 
-classifier = DecisionTreeClassifier(min_samples_split=2, max_depth=10)
+s, d, m = random_search(X_valid, Y_valid, 15)
+print("s = " + str(s) + ", d = " + str(d) + ", m = " + mode[m])
+classifier = DecisionTreeClassifier(min_samples_split=s, max_depth=d, mode=mode[m])
 classifier.fit(X_train, Y_train)
 classifier.print_tree()
 
 Y_pred = classifier.predict(X_test)
 print("Accuracy: " + str(accuracy_score(Y_test, Y_pred)))
+# end = time.time()
+# print(end - start)
